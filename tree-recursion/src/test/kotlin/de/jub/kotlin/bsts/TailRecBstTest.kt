@@ -1,6 +1,5 @@
 package de.jub.kotlin.bsts
 
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.RepeatedTest
 
