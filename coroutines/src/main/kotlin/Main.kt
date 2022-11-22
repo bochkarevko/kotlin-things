@@ -8,30 +8,6 @@ import kotlin.random.Random
 
 
 
-
-
-
-//fun main(): Unit = runBlocking {
-//    val jobs: List<Job> = List(1_000_000) {
-//        launch(
-//            Dispatchers.Default
-//                    + CoroutineName("Coroutine #$it")
-//                    + CoroutineExceptionHandler { context, error ->
-//                println("${context[CoroutineName]?.name} error:  $error")
-//            },
-//            CoroutineStart.LAZY
-//        ) { // new asynchronous activity
-//            delay(Random.nextLong(1000))
-//            if (it % 10 == 0) {
-//                throw IllegalStateException("Nothing to say")
-//            }
-//            println("Hello from coroutine $it!")
-//        }
-//    }
-//    jobs.forEach { it.start() }
-//}
-
-
 //fun main(): Unit = runBlocking {
 //    val startTime = System.currentTimeMillis()
 //    val job = launch(Dispatchers.Default) {

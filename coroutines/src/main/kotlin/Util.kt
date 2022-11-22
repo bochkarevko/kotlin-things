@@ -3,6 +3,9 @@ import kotlinx.coroutines.isActive
 import kotlin.coroutines.coroutineContext
 import kotlin.random.Random
 
+class Item
+class Token
+class Post
 class Location
 class Content
 class Reference
