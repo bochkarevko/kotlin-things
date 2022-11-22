@@ -1,22 +1,82 @@
 import kotlinx.coroutines.*
 
-fun uselessExceptionHandler(): Unit = runBlocking {
-    val jobs: List<Job> = List(1_000_000) {
+fun CoroutineScope.uselessExceptionHandler() =
+    List(25) {
         launch(
             Dispatchers.Default
                     + CoroutineName("Coroutine #$it")
                     + CoroutineExceptionHandler { context, error ->
                 println("${context[CoroutineName]?.name} error:  $error")
-            },
-            CoroutineStart.LAZY
+            }
         ) { // new asynchronous activity
             randomLengthSuspend(500, 1000)
-            if (it % 10 == 0) {
+            if (it % 7 == 0 && it > 0) {
                 throw IllegalStateException("Nothing to say")
+                // exception goes to the CoroutineScope, not to the ExceptionHandler defined above
             }
             println("Hello from coroutine $it!")
         }
     }
 
-    jobs.forEach { it.start() }
+fun allChildrenFail() = runBlocking { // root coroutine
+    val job1 = launch {
+        delay(500)
+        println("Some jobs just want to watch the world burn")
+        throw IndexOutOfBoundsException()
+    }
+    val job2 = launch {
+        println("Going to do something extremely useful")
+        delay(10000)
+        println("I've done something extremely useful")
+    }
+}
+fun supervisor() = runBlocking {
+    val supervisor = SupervisorJob()
+    with(CoroutineScope(coroutineContext + supervisor)) {
+        val job1 = launch {
+            delay(500)
+            println("Some jobs just want to watch the world burn")
+            throw IndexOutOfBoundsException()
+        }
+        val job2 = launch {
+            println("Going to do something extremely useful")
+            delay(3000)
+            println("I've done something extremely useful")
+        }
+    }
+    supervisor.join()
+}
+
+fun supervisorScope() = runBlocking {
+    supervisorScope {
+        val job1 = launch() {
+            delay(500)
+            println("Some jobs just want to watch the world burn")
+            throw IndexOutOfBoundsException()
+        }
+        val job2 = launch() {
+            println("Going to do something extremely useful")
+            delay(3000)
+            println("I've done something extremely useful")
+        }
+    }
+}
+
+fun overridingHandler() = runBlocking(CoroutineExceptionHandler { context, error ->
+    println("root handler called")
+}) {
+    supervisorScope {
+        launch {
+            throw Exception()
+        }
+        launch(CoroutineExceptionHandler { context, error ->
+            println("personal handler called")
+        }) {
+            throw Exception()
+        }
+    }
+}
+
+fun main() {
+    overridingHandler()
 }
