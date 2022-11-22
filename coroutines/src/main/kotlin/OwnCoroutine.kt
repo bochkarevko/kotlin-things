@@ -7,9 +7,14 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-suspend fun AsynchronousFileChannel.aRead(buf: ByteBuffer): Int =
+private val sep
+    get() = System.lineSeparator()
+
+suspend fun AsynchronousFileChannel.aRead(buf: ByteBuffer, pos: Int) =
+    // Scheme: call-with-current-continuation; call/cc
     suspendCoroutine { cont ->
-        read(buf, 0L, Unit, object : CompletionHandler<Int, Unit> {
+        // CompletionHandler ~ Continuation
+        read(buf, pos.toLong(), Unit, object : CompletionHandler<Int, Unit> {
             override fun completed(bytesRead: Int, attachment: Unit) {
                 cont.resume(bytesRead)
             }
@@ -20,25 +25,24 @@ suspend fun AsynchronousFileChannel.aRead(buf: ByteBuffer): Int =
         })
     }
 
-internal val sep
-    get() = System.lineSeparator()
-
 fun suspendableRead() = runBlocking {
-    coroutineScope {
-        val readJob = launch(Dispatchers.IO) {
-            val fileName = "coroutines/src/main/kotlin/OwnCoroutine.kt"
-            println("Asynchronously loading file \"$fileName\" ...")
-            val channel = AsynchronousFileChannel.open(Paths.get(fileName))
-            try {
-                val buf = ByteBuffer.allocate(4096)
-                val bytesRead = channel.aRead(buf)
-                println("Read $bytesRead bytes starting with \"${String(buf.array().copyOf(10))}\"")
-            } finally {
-                channel.close()
+    val readJob = launch(Dispatchers.IO) {
+        val fileName = "coroutines/src/main/kotlin/OwnCoroutine.kt"
+        println("Asynchronously loading file \"$fileName\" ...")
+        val channel = AsynchronousFileChannel.open(Paths.get(fileName))
+        val buf = ByteBuffer.allocate(64)
+        var bytesRead = 0
+        channel.use {// finally { channel.close() }
+            while (isActive) {
+                val lastRead = it.aRead(buf, bytesRead)
+                Thread.sleep(100) // imitate long read
+                if (lastRead <= 0) break
+                bytesRead += lastRead
+                println("Read $lastRead:$sep```$sep${String(buf.array().take(lastRead).toByteArray())}$sep```")
+                buf.clear()
             }
         }
-//        delay(1000)
-//        readJob.cancel()
     }
-
+    delay(500)
+    readJob.cancel()
 }
