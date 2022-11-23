@@ -13,7 +13,7 @@ fun manyCoroutines(): Unit = runBlocking {
     }
 }
 
-fun manyThreads(): Unit = runBlocking {
+fun manyThreads() {
     repeat(1_000_000) { // it: Int
         thread { // new asynchronous activity
             sleep(1000L)
