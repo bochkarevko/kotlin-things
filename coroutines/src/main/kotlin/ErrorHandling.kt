@@ -1,22 +1,23 @@
 import kotlinx.coroutines.*
 
-fun CoroutineScope.uselessExceptionHandler() =
-    List(25) {
-        launch(
-            Dispatchers.Default
-                    + CoroutineName("Coroutine #$it")
-                    + CoroutineExceptionHandler { context, error ->
-                println("${context[CoroutineName]?.name} error:  $error")
-            }
+fun CoroutineScope.uselessExceptionHandler() {
+    repeat(23) {
+        launch(SupervisorJob() // supervisor job -> other children won't be cancelled
+                + CoroutineName("Coroutine #$it")
+                + CoroutineExceptionHandler { _, error -> println("Supervisor sees error: ${error.message}") }
         ) { // new asynchronous activity
             randomLengthSuspend(500, 1000)
             if (it % 7 == 0 && it > 0) {
-                throw IllegalStateException("Nothing to say")
+                // another asynchronous activity with "separate" exception handler, which is useless
+                launch(CoroutineExceptionHandler { _, error -> println("launch sees error: $error") }) {
+                    throw IllegalStateException("${coroutineContext[CoroutineName]?.name} says hi!")
+                }
                 // exception goes to the CoroutineScope, not to the ExceptionHandler defined above
             }
             println("Hello from coroutine $it!")
         }
     }
+}
 
 fun allChildrenFail() = runBlocking { // root coroutine
     val job1 = launch {
@@ -30,6 +31,7 @@ fun allChildrenFail() = runBlocking { // root coroutine
         println("I've done something extremely useful")
     }
 }
+
 fun supervisor() = runBlocking {
     val supervisor = SupervisorJob()
     with(CoroutineScope(coroutineContext + supervisor)) {
@@ -77,6 +79,7 @@ fun overridingHandler() = runBlocking(CoroutineExceptionHandler { context, error
     }
 }
 
-fun main() {
-    overridingHandler()
+fun main() = runBlocking {
+    uselessExceptionHandler()
+    delay(1000)
 }
