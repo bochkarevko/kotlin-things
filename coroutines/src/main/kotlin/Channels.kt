@@ -111,3 +111,7 @@ fun runSelector() = runBlocking {
     channel1.close()
     channel2.close()
 }
+
+fun main() {
+    pubSubLike()
+}

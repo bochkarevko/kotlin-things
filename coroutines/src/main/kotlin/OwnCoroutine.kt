@@ -46,3 +46,7 @@ fun suspendableRead() = runBlocking {
     delay(500)
     readJob.cancel()
 }
+
+fun main() {
+    suspendableRead()
+}

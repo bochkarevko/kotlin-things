@@ -1,5 +1,6 @@
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -9,8 +10,16 @@ val lock = ReentrantLock()
 
 suspend fun suspendWithLock() {
     lock.lock()
-    longSuspending()
+    randomLengthSuspend(max = 100)
     lock.unlock()
+}
+
+fun getProblems() = runBlocking {
+    repeat(10) {
+        launch(Dispatchers.Unconfined) {
+            suspendWithLock()
+        }
+    }
 }
 
 val mutex = Mutex()
@@ -28,4 +37,8 @@ suspend fun suspendWithMutex() {
         }
     }
     println("Counter = $counter")
+}
+
+fun main() = runBlocking {
+    getProblems()
 }

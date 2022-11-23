@@ -57,3 +57,7 @@ fun runActor() = runBlocking<Unit> {
     getJob.join()
     counter.close() // shutdown the actor
 }
+
+fun main() {
+    runActor()
+}
