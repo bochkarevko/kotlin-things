@@ -1,32 +1,54 @@
 import kotlinx.coroutines.*
 
+suspend fun preparePost(): Token =
+    withContext(Dispatchers.IO) {
+        println("Long fetch")
+        delay(1500)
+        Token()
+    }
+
+suspend fun submitPost(token: Token, item: Item): Post =
+    withContext(Dispatchers.IO) {
+        println("Fast submit")
+        delay(500)
+        Post()
+    }
+
+suspend fun processPost(post: Post) =
+    withContext(Dispatchers.Default) {
+        println("Processing")
+        delay(1000)
+    }
+
+suspend fun postItem(item: Item) {
+    val token = preparePost()
+    val post = submitPost(token, item)
+    processPost(post)
+}
+
 @OptIn(DelicateCoroutinesApi::class)
 fun main() {
-    val ui = newSingleThreadContext("UI")
-    val io = newSingleThreadContext("IO")
-    val uiScope = CoroutineScope(ui)
+    val uiThread = newSingleThreadContext("UI") // Main
+    val viewScope = CoroutineScope(SupervisorJob() + uiThread)
 
-    uiScope.launch {
+    viewScope.launch {
         launch {
             try {
                 while (isActive) {
                     println("UI thread is not blocked.")
-                    delay(100)
+                    delay(300)
                 }
             } finally {
                 println("UI (view) is destroyed")
             }
         }
-        println("UI fetches the answer")
-        val answer: Int
-        withContext(io) {
-            answer = sleepyProvider()
-        }
-        println("Ui got answer = $answer")
+        println("Post something")
+        postItem(Item())
+        println("Posted")
     }
 
     runBlocking {
-        delay(1234)
-        uiScope.cancel()
+        delay(4321)
+        viewScope.cancel()
     }
 }
