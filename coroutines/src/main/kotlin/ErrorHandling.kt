@@ -19,67 +19,82 @@ fun CoroutineScope.uselessExceptionHandler() {
     }
 }
 
-fun allChildrenFail() = runBlocking { // root coroutine
-    val job1 = launch {
+fun CoroutineScope.jobThatThrows() =
+    launch {
         delay(500)
         println("Some jobs just want to watch the world burn")
-        throw IndexOutOfBoundsException()
+        throw Exception("Burn!")
     }
+
+fun allChildrenFail() = runBlocking { // root coroutine
+    val job1 = jobThatThrows()
     val job2 = launch {
         println("Going to do something extremely useful")
         delay(10000)
         println("I've done something extremely useful")
     }
+    val job3 = launch {
+        println("I want to be useful, too")
+        delay(5000)
+        println("I've done something extremely useful, too")
+    }
 }
 
-fun supervisor() = runBlocking {
-    val supervisor = SupervisorJob()
-    with(CoroutineScope(coroutineContext + supervisor)) {
-        val job1 = launch {
-            delay(500)
-            println("Some jobs just want to watch the world burn")
-            throw IndexOutOfBoundsException()
-        }
+fun supervisorJobDoesNotFail() {
+    val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    with(scope) {// root coroutine
+        val job1 = jobThatThrows()
         val job2 = launch {
             println("Going to do something extremely useful")
             delay(3000)
             println("I've done something extremely useful")
         }
     }
-    supervisor.join()
-}
-
-fun supervisorScope() = runBlocking {
-    supervisorScope {
-        val job1 = launch() {
-            delay(500)
-            println("Some jobs just want to watch the world burn")
-            throw IndexOutOfBoundsException()
-        }
-        val job2 = launch() {
-            println("Going to do something extremely useful")
-            delay(3000)
-            println("I've done something extremely useful")
+    scope.coroutineContext[Job.Key]?.let { job ->
+        runBlocking {
+            try {
+                job.children.forEach { it.join() }
+            } catch (_: Exception) {
+                // we can check which jobs have failed here
+            }
         }
     }
 }
 
-fun overridingHandler() = runBlocking(CoroutineExceptionHandler { context, error ->
-    println("root handler called")
-}) {
-    supervisorScope {
-        launch {
-            throw Exception()
-        }
-        launch(CoroutineExceptionHandler { context, error ->
-            println("personal handler called")
-        }) {
-            throw Exception()
+fun supervisorScopeDoesNotFail() {
+    val scope = CoroutineScope(Dispatchers.Default).launch { // root coroutine
+        supervisorScope {
+            val job1 = jobThatThrows()
+            val job2 = launch {
+                println("Going to do something extremely useful")
+                delay(3000)
+                println("I've done something extremely useful")
+            }
         }
     }
+    runBlocking { scope.join() }
 }
 
-fun main() = runBlocking {
-    uselessExceptionHandler()
-    delay(1000)
+fun overridingHandler() {
+    val scope = CoroutineScope(CoroutineExceptionHandler { context, error ->
+        println("root handler called")
+    }).launch {
+        supervisorScope {
+            jobThatThrows()
+            launch(CoroutineExceptionHandler { context, error ->
+                println("personal handler called")
+            }) {
+                jobThatThrows()
+            }
+        }
+    }
+    runBlocking { scope.join() }
+}
+
+fun main() {
+    // uselessExceptionHandler()
+    // allChildrenFail()
+    supervisorJobDoesNotFail()
+    // supervisorScopeDoesNotFail()
+    // overridingHandler()
 }
