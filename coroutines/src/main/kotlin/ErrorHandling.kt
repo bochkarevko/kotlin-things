@@ -62,8 +62,9 @@ fun supervisorJobDoesNotFail() {
 }
 
 fun supervisorScopeDoesNotFail() {
-    val scope = CoroutineScope(Dispatchers.Default).launch { // root coroutine
-        supervisorScope {
+    val somePreExistingScope = CoroutineScope(Dispatchers.Default)
+    val supervisedJob = somePreExistingScope.launch { // root coroutine
+        supervisorScope { // scope with SupervisorJob as the main Job
             val job1 = jobThatThrows()
             val job2 = launch {
                 println("Going to do something extremely useful")
@@ -72,13 +73,14 @@ fun supervisorScopeDoesNotFail() {
             }
         }
     }
-    runBlocking { scope.join() }
+    runBlocking { supervisedJob.join() }
 }
 
 fun overridingHandler() {
-    val scope = CoroutineScope(CoroutineExceptionHandler { context, error ->
+    val scopeWithHandler = CoroutineScope(CoroutineExceptionHandler { context, error ->
         println("root handler called")
-    }).launch {
+    })
+    scopeWithHandler.launch {
         supervisorScope {
             jobThatThrows()
             launch(CoroutineExceptionHandler { context, error ->
@@ -88,13 +90,21 @@ fun overridingHandler() {
             }
         }
     }
-    runBlocking { scope.join() }
+    scopeWithHandler.coroutineContext[Job.Key]?.let { job ->
+        runBlocking {
+            try {
+                job.children.forEach { it.join() }
+            } catch (_: Exception) {
+                // we can check which jobs have failed here
+            }
+        }
+    }
 }
 
 fun main() {
     // uselessExceptionHandler()
     // allChildrenFail()
-    supervisorJobDoesNotFail()
+    // supervisorJobDoesNotFail()
     // supervisorScopeDoesNotFail()
-    // overridingHandler()
+    overridingHandler()
 }
