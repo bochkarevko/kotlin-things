@@ -27,15 +27,17 @@ fun CoroutineScope.filter(numbers: ReceiveChannel<Int>, prime: Int) = produce<In
     for (x in numbers) if (x % prime != 0) send(x)
 }
 
-fun tenPrimes() = runBlocking {
+fun getPrimes(n: Int, sep: String = System.lineSeparator()) = runBlocking {
     var cur = numbersFrom(2)
-    repeat(10) {
+    repeat(n) {
         val prime = cur.receive()
-        println(prime)
+        print("$prime$sep")
         cur = filter(cur, prime)
     }
     coroutineContext.cancelChildren()
 }
+
+fun tenPrimes() = getPrimes(10)
 
 fun <T> CoroutineScope.production(ch: SendChannel<T>, msg: T) =
     launch {
@@ -113,5 +115,5 @@ fun runSelector() = runBlocking {
 }
 
 fun main() {
-    pubSubLike()
+    getPrimes(20, " ")
 }
