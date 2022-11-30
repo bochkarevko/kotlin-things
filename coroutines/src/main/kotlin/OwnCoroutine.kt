@@ -1,4 +1,5 @@
 import kotlinx.coroutines.*
+import java.lang.Exception
 import java.nio.ByteBuffer
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.channels.CompletionHandler
@@ -6,6 +7,7 @@ import java.nio.file.Paths
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.random.Random
 
 private val sep
     get() = System.lineSeparator()
@@ -47,6 +49,31 @@ fun suspendableRead() = runBlocking {
     readJob.cancel()
 }
 
+suspend fun cancellable(x: Int) =
+    // Scheme: call-with-current-continuation; call/cc
+    suspendCancellableCoroutine { cancellableCont ->
+        cancellableCont.invokeOnCancellation { throwable: Throwable? ->
+            // release resources and etc.
+            println(throwable?.message ?: "no reason provided")
+        }
+
+        Thread.sleep(100)
+
+        if (Random.nextDouble(1.0) > 0.5) {
+            cancellableCont.cancel(Exception("bad luck"))
+        } else {
+            cancellableCont.resume(x * 2)
+        }
+
+    }
+
 fun main() {
-    suspendableRead()
+    // suspendableRead()
+
+    runBlocking {
+        val a = cancellable(23)
+        val b = cancellable(a)
+        val c = cancellable(b)
+        println(c)
+    }
 }
