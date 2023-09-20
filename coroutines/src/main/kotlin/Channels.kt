@@ -97,13 +97,13 @@ fun runSelector() = runBlocking {
     prodForSelect(channel2, "hello", 50)
 
     val runningSelect1 = launch {
-        while(isActive) {
+        while (isActive) {
             println(selector(channel1, channel2))
         }
     }
 
     val runningSelect2 = launch {
-        while(isActive) {
+        while (isActive) {
             println(selector(channel2, channel1))
         }
     }

@@ -1,7 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "1.7.20" apply false
-    id("org.jetbrains.kotlinx.benchmark") version "0.4.4"
-    application
+    kotlin("multiplatform") version "1.9.10" apply false
 }
 
 group = "org.jetbrains"
