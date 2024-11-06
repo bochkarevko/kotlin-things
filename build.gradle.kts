@@ -1,9 +1,9 @@
 plugins {
-    kotlin("multiplatform") version "1.9.10" apply false
+    kotlin("multiplatform") version "2.0.21" apply false
 }
 
 group = "org.jetbrains"
-version = "1.0"
+version = "1.1"
 
 allprojects {
     repositories {
